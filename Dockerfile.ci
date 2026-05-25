@@ -14,7 +14,7 @@
 # - CI/CD
 # =========================================
 
-FROM node:24.16.0-bookworm
+FROM docker.m.daocloud.io/library/node:24.16.0-bookworm
 
 # 避免交互
 ENV DEBIAN_FRONTEND=noninteractive
@@ -87,7 +87,10 @@ RUN pip3 config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple \
     && pip3 config set install.trusted-host pypi.tuna.tsinghua.edu.cn
 
 # 升级 pip
-RUN pip3 install --upgrade pip setuptools wheel
+RUN pip3 install --break-system-packages --upgrade \
+    pip \
+    setuptools \
+    wheel
 
 # =========================================
 # Node.js 工具配置
@@ -106,53 +109,18 @@ RUN corepack prepare yarn@stable --activate
 RUN corepack prepare pnpm@latest --activate
 
 # yarn 国内源
-RUN yarn config set registry https://registry.npmmirror.com
+RUN yarn config set npmRegistryServer \
+    https://registry.npmmirror.com -H
 
 # pnpm 国内源
 RUN pnpm config set registry https://registry.npmmirror.com
 
-# =========================================
-# 常用全局工具
-# =========================================
-RUN npm install -g \
-    typescript \
-    ts-node \
-    vite \
-    webpack \
-    webpack-cli \
-    turbo \
-    rimraf \
-    cross-env \
-    concurrently \
-    npm-check-updates \
-    serve \
-    http-server \
-    eslint \
-    prettier
-
-# =========================================
-# 微信/小程序相关常用依赖
-# =========================================
-RUN npm install -g \
-    @tarojs/cli \
-    miniprogram-ci
-
-# =========================================
-# Git 配置（避免 CI warning）
-# =========================================
-RUN git config --global init.defaultBranch main
-
-# =========================================
-# SSH known_hosts（避免首次连接卡住）
-# =========================================
 RUN mkdir -p /root/.ssh \
+    && chmod 700 /root/.ssh \
     && ssh-keyscan github.com >> /root/.ssh/known_hosts \
-    && ssh-keyscan gitlab.com >> /root/.ssh/known_hosts
-
-# =========================================
-# 工作目录
-# =========================================
-WORKDIR /app
+    && ssh-keyscan gitlab.com >> /root/.ssh/known_hosts \
+    && ssh-keyscan newgitlab.kuaidihelp.com >> /root/.ssh/known_hosts \
+    && chmod 644 /root/.ssh/known_hosts
 
 # =========================================
 # 默认 shell
